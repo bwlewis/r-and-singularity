@@ -226,7 +226,7 @@ sudo singularity bootstrap variant_pca.img variant_pca.def
 
 The container includes a simple unit test invoked with
 ```
-mpirun -np 4 singularity test container.img
+mpirun -np 4 singularity test variant_pca.img
 ```
 
 A small, fast-running example computes principal components for the first 10,000
