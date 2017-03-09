@@ -81,7 +81,8 @@ https://github.com/python/cpython), introducing a complex but typical software
 dependency chain.
 
 Here is a singularity container definition file for the example using the Ubuntu
-Xenial operating system:
+Xenial operating system. (Note that you can build a container from this definition
+file on any Singularity-supported operating system.)
 
 ```
 BootStrap: debootstrap
