@@ -32,10 +32,10 @@ turn recipes into runnable applications and then deploy them anywhere.
 
 The success of Docker, CoreOS, and related systems in enterprise business
 applications shows that there is a huge demand for lightweight, versionable,
-and portable containers. Notably, these technologies have not been widely
-successful in HPC settings. Shifter (https://github.com/NERSC/shifter) is the
-most successful attempt to use Docker in HPC, but suffers from several
-drawbacks. The root-capable daemon program used by Docker is difficult to
+and portable containers. Notably, these technologies have not been all that
+widely successful in HPC settings. Shifter (https://github.com/NERSC/shifter)
+is the most successful application of Docker to HPC, but suffers from a few
+drawbacks.  The root-capable daemon program used by Docker is difficult to
 accommodate in many HPC environments. And the relatively heavy-weight nature of
 Docker virtualization can degrade the performance of some hardware resources
 like Infiniband networking.
