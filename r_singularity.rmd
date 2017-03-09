@@ -13,8 +13,8 @@ In our opinion, the idiosyncratic nature of most HPC technologies represents a
 major road block to their adoption (in any language or system). HPC
 technologies are often difficult to set up, use, and manage. They can rely on
 frequently changing and complex software library dependencies, requiring
-scientists to spend time on system administration and less time on their
-problems.
+scientists to spend time on system administration and commensurately less time
+on their research problems.
 
 We illustrate one approach to help accelerate the adoption of HPC technology by
 the R community using Singularity, a modern application containerization
@@ -31,8 +31,8 @@ high-performance, low-overhead way.  Container technology allows us to quickly
 turn recipes into runnable applications and then deploy them anywhere.
 
 The success of Docker, CoreOS, and related systems in enterprise business
-applications shows that there is a huge demand for lightweight, rapidly
-deployable containers. Notably, these technologies have not been widely
+applications shows that there is a huge demand for lightweight, versionable,
+and portable containers. Notably, these technologies have not been widely
 successful in HPC settings. Shifter (https://github.com/NERSC/shifter) is the
 most successful attempt to use Docker in HPC, but suffers from several
 drawbacks. The root-capable daemon program used by Docker is difficult to
