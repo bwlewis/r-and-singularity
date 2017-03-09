@@ -45,7 +45,7 @@ particularly well-suited to HPC environments. Singularity virtualizes the
 minimum amount necessary to reproduce compute, allowing applications full
 access to fast hardware resources like Infiniband networks and GPUs.  And
 singularity runs without a server at all, eliminating possible server security
-exploits. The minimalist philosophy of singularity makes it easy to install and
+exploits. The minimalist philosophy of Singularity makes it easy to install and
 run on laptops or supercomputers, promoting the ability to quickly test
 containers before using them across large systems. Singularity is now widely
 available in supercomputer centers across the world.
@@ -80,7 +80,7 @@ Python (https://github.com/tensorflow/tensorflow,
 https://github.com/python/cpython), introducing a complex but typical software
 dependency chain.
 
-Here is a singularity container definition file for the example using the Ubuntu
+Here is a Singularity container definition file for the example using the Ubuntu
 Xenial operating system. (Note that you can build a container from this definition
 file on any Singularity-supported operating system.)
 
@@ -119,7 +119,7 @@ MirrorURL: http://archive.ubuntu.com/ubuntu/
 ```
 
 Assuming that the above definition file is named `tensorflow.def` you
-can bootstrap a singularity container image named `tensorflow.img` with:
+can bootstrap a Singularity container image named `tensorflow.img` with:
 ```
 sudo rm -f tensorflow.img && \
 sudo singularity create --size 4000 tensorflow.img && \
