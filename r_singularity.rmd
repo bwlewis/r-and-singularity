@@ -132,10 +132,12 @@ world" program as an example to verify things are working. The `%run` section
 of this example simply runs an arbitrary user R program named `main.R` in the
 container's working directory.
 
-We can run the `%test` script with
+Run the `%test` script with
 ```
 singularity test tensorflow.img
 ```
+We love Singularity's ability to include unit tests in container definition files;
+it feels somehwat like unit tests for an R package!
 
 Run an arbitrary R program in the container by creating a `main.R` file and
 ```
