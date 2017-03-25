@@ -9,7 +9,7 @@ distributed and parallel computing tools. Despite its impressive breadth of
 sophisticated high-performance computing (HPC) tools, R is not often that
 widely used for "big" problems.
 
-I believe the idiosyncracies of most HPC technologies represent the major road
+I believe the idiosyncrasies of most HPC technologies represent the major road
 block to their adoption (in any language or system). HPC technologies are often
 difficult to set up, use, and manage.  They often rely on frequently changing
 and complex software library dependencies, and sometimes highly specific
@@ -33,7 +33,7 @@ quickly turn recipes into runnable applications and then deploy them anywhere.
 The success of Docker, CoreOS, and related systems in enterprise business
 applications shows that there is a huge demand for lightweight, versionable,
 and portable containers. Notably, these technologies have not been all that
-widely successful in HPC settings, depsite significant effort. Shifter
+widely successful in HPC settings, despite significant effort. Shifter
 (https://github.com/NERSC/shifter) is the most successful application of Docker
 to HPC, and while very impressive suffers from a few important drawbacks.  The
 root-capable daemon program used by Docker is difficult to accommodate in many
@@ -124,6 +124,10 @@ MirrorURL: http://archive.ubuntu.com/ubuntu/
   Rscript --slave "main.R"
 ```
 
+**TIP** If you're running on Red Hat or CentOS, you'll need the debootstrap
+program, `sudo yum install debootstrap` (see the Singularity documentation
+for more information).
+
 Assuming that the above definition file is named `tensorflow.def` you
 can bootstrap a Singularity container image named `tensorflow.img` with:
 ```
@@ -152,7 +156,8 @@ in the container working directory and running
 singularity run tensorflow.img
 ```
 
-##  Full-genome variant PCA
+
+##  Full-genome variant Principal Components
 
 The previous example illustrated a complex tool chain but only running on a
 single computer.  This example is closer to a complete distributed R
@@ -184,9 +189,9 @@ user-specified environment variable specified by the user, of sparse genomic
 variant VCF files. The example is very general, requiring an arbitrary number
 of VCF data files as input and running on any number of computers. It uses MPI
 to coordinate parallel activity across computers, along with the the Rmpi,
-doMPI, and foreach packages in R.
-
-The program requires the following inputs and assumptions:
+doMPI, and foreach packages in R. The choice of MPI is well-suited to
+supercomputer deployment, and the example assumes that MPI is available along
+with the following assumptions:
 
 - Launched by MPI.
 - Global shared file system.  *(These first two assumptions are common on supercomputers. The example can be relatively easily restructured to avoid the first two requirements, see the notes on the algorithm used in the references below.)* 
@@ -196,11 +201,15 @@ The program requires the following inputs and assumptions:
 - Optional NCOMP environment variable specifying the number of principal components
   to return, defaulting to 3.
 
-And produces the following output:
+A successful run produces the following output:
 
 - A file 'pca.rdata' in serialized R format containing the largest NCOMP
   singular values and corresponding principal component vectors of the variant
   data.
+
+This example was designed for deployment with supercomputer systems in mind.
+See https://github.com/bwlewis/1000_genomes_examples for other implementations
+that don't require MPI or shared file systems.
 
 Singularity encapsulates the program logic and the external library dependency
 chain (MPI, etc.) required by the computation in the following definition file:
@@ -230,7 +239,7 @@ Include: bash
   wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/unit.R && mv unit.R /usr/local/share/R/
 
   # This is the main R program run by /singularity
-  wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/pca.R && mv pca.R /usr/local/share/R/
+  wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/pca-mpi.R && mv pca-mpi.R /usr/local/share/R/
 
 
 %test
@@ -239,7 +248,7 @@ Include: bash
 
 %runscript
   #!/bin/bash
-  Rscript --slave "/usr/local/share/R/pca.R"
+  Rscript --slave "/usr/local/share/R/pca-mpi.R"
 ```
 
 
@@ -294,10 +303,14 @@ wait
 LANG=C CHUNKSIZE=10000000 mpirun -np 4 singularity run -H $(pwd) variant_pca.img 
 ```
 
+Replace `-np 4` with the number of processors available on your system. Or, submit
+the job using an available cluster job manager like slurm.
+
+
 ### Notes
 
 The computation uses an R program downloaded from
-https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/pca.R
+https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/pca-mpi.R
 that we don't reproduce here. See that file and
 https://github.com/bwlewis/1000_genomes_examples/blob/master/PCA_whole_genome.Rmd
 for additional notes.
@@ -309,9 +322,9 @@ then computing principal components on the R matrices. Parallel computation is
 used within each phase.
 
 Sparse matrix chunk size is either specified by the user with the environment
-variable CHUNKSIZE indicating the number of variants (matrix columns) per
-chunk, or automatically determined based on a heuristic using the computer
-memory size.
+variable CHUNKSIZE indicating the maximum number of nonzero matrix elements per
+chunk. If unspecified, CHUNKSIZE is automatically determined based on a
+heuristic using the computer memory size.
 
 This version of the program assumes a global shared file system between
 computers, for instance Lustre or GPFS2. The first processing phase of the
