@@ -1,4 +1,8 @@
-# R and Singularity
+---
+title: R and Singularity
+output: html_document
+---
+
 
 R (https://www.r-project.org) is a premier system for statistical and
 scientific computing and data science. At its core, R is a very carefully
@@ -277,15 +281,25 @@ variants from the 1000 Genomes Project chromosomes 21 and 22 as follows:
 ```
 wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/extra/chr21.head.vcf.gz
 wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/extra/chr22.head.vcf.gz
-LANG=C CHUNKSIZE=10000000 mpirun -np 2 singularity run -H $(pwd) variant_pca.img 
+LANG=C CHUNKSIZE=10000000 mpirun -x LANG -x CHUNKSIZE -np 2 singularity run -H $(pwd) variant_pca.img 
 ```
-Read the output pca.rdata file from R with, for example:
+Read the output pca.rdata file from R using `readRDS()`. The following code
+plots the first three estimated principal components.
 ```{r, eval=FALSE}
 x <- readRDS('pca.rdata')
-print(x$d)
 library(lattice)
 splom(x$v)
 ```
+```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+x <- readRDS(gzcon(url("http://illposed.net/chr21-22-pca.rdata",open="rb")))
+library(lattice)
+splom(x$v)
+```
+We see some obvious clusters in the data, but the clusters are not all that
+well-defined because we only use data from two smaller chromosomes (21 and 22)
+in this example. The clusters correspond to distinct genetic superpopulations.
+See the following example for a refined plot using the whole genomes.
+
 
 ### Full-sized example
 
@@ -333,8 +347,31 @@ one. Or, submit the job using an available cluster job manager like slurm.
 See https://cran.r-project.org/web/packages/doMPI/vignettes/doMPI.pdf
 for more details on using MPI with R.
 
+### Example output
 
-### Notes
+To give you an idea of performance, I ran this example on four Amazon EC2
+r4-4xlarge instances. The parsing step completed in about 20 minutes, and
+principal component computation took about 11 minutes (680 seconds).
+
+As with the small example above, we can read the output file and
+plot the principal components:
+```{r, eval=FALSE}
+x <- readRDS('pca.rdata')
+library(lattice)
+splom(x$v)
+```
+```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+x <- readRDS(gzcon(url("http://illposed.net/1239-680-r4-4xlargex4-chr1-22-pca.rdata", open="rb")))
+library(lattice)
+splom(x$v)
+```
+The resulting clusters are much more highly defined, and split into four or
+five very well-defined data clusters, corresponding almost exactly to the NIH
+superpopulation categories for each person. Some of the data clusters
+themselves exhibit sub-cluster structure.
+
+
+### Additional Notes
 
 The computation uses an R program downloaded from
 https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/pca-mpi.R
