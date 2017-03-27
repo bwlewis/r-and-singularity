@@ -302,16 +302,34 @@ while test $j -lt 23; do
   j=$(( $j + 1 ))
 done
 wait
-
-LANG=C CHUNKSIZE=10000000 mpirun -np 2 singularity run -H $(pwd) variant_pca.img 
 ```
 
-When running on more than one computer, first distribute the vcf.gz files to
-working directories on each computer. Each computer will only process the files
-located in its working directory.
+When running on more than one computer, first distribute the vcf.gz files by
+scattering them across working directories on each computer. Each computer will
+only process the files located in its working directory, so copy a subset of
+the files to each computer.
 
-Replace `-np 2` with the number of computers available in your cluster plus
-one. That isOr, submit the job using an available cluster job manager like slurm.
+The singularity container image must also be available to run on each computer,
+so copy the image to each one.
+
+Now scatter the `*.vcf.gz` files across your MPI computers, for instance using `scp`.
+Let's assume for this example that we have 4 total computers. Then we need to invoke
+the program on 4 + 1 = 5 total MPI hosts, as outlined in
+https://cran.r-project.org/web/packages/doMPI/vignettes/doMPI.pdf (the first
+listed host will operate as the R master program in a master/slave configuration).
+
+Assume that our four host computers are listed in a comma separated list
+by the environment variable HOSTS, for instance by
+```
+HOSTS=10.0.0.1,10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4
+```
+Then a typical openmpi invocation is (for our four hosts):
+```
+LANG=C CHUNKSIZE=10000000 mpirun -wd $(pwd) -x LANG -x CHUNKSIZE -np 5 -host $(HOSTS) singularity run -H $(pwd) variant_pca.img
+```
+
+Replace the host list and `-np 5` with the number of computers available in your cluster plus
+one. Or, submit the job using an available cluster job manager like slurm.
 See https://cran.r-project.org/web/packages/doMPI/vignettes/doMPI.pdf
 for more details on using MPI with R.
 
