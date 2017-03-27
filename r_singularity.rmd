@@ -291,12 +291,12 @@ library(lattice)
 splom(x$v)
 ```
 ```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
-x <- readRDS(gzcon(url("http://illposed.net/chr21-22-pca.rdata",open="rb")))
+x <- readRDS(gzcon(url("https://bwlewis.github.io/r-and-singularity/chr21-22-pca.rdata",open="rb")))
 library(lattice)
 splom(x$v)
 ```
 We see some obvious clusters in the data, but the clusters are not all that
-well-defined because we only use data from two smaller chromosomes (21 and 22)
+well-defined because we only use partial data from two chromosomes (21 and 22)
 in this example. The clusters correspond to distinct genetic superpopulations.
 See the following example for a refined plot using the whole genomes.
 
@@ -361,7 +361,7 @@ library(lattice)
 splom(x$v)
 ```
 ```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
-x <- readRDS(gzcon(url("http://illposed.net/1239-680-r4-4xlargex4-chr1-22-pca.rdata", open="rb")))
+x <- readRDS(gzcon(url("https://bwlewis.github.io/r-and-singularity/1239-680-r4-4xlargex4-chr1-22-pca.rdata", open="rb")))
 library(lattice)
 splom(x$v)
 ```
