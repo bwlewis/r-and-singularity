@@ -5,7 +5,7 @@ The notes are in R markdown format. You can prepare an HTML document from them w
 rmarkdown::render("r_singularity.rmd")
 ```
 
-Or go to https://bwlewis.github.io/r_singularity to see the HTML document rendered on
+Or go to https://bwlewis.github.io/r-and-singularity to see the HTML document rendered on
 GitHub.
 
 ## References
