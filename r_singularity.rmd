@@ -194,9 +194,11 @@ supercomputer deployment, and the example assumes that MPI is available along
 with the following assumptions:
 
 - Launched by MPI.
-- Global shared file system.  *(These first two assumptions are common on supercomputers. The example can be relatively easily restructured to avoid the first two requirements, see the notes on the algorithm used in the references below.)* 
 - One or more gzip-compressed variant files ending in ".vcf.gz" (the program will
   use all files matching this pattern).
+- Assumes that the input variant files are split up among working directories
+  across the worker computers--each worker will parse and process only the variant
+  files in its local working directory.
 - Optional CHUNKSIZE environment variable in number of variants per chunk.
 - Optional NCOMP environment variable specifying the number of principal components
   to return, defaulting to 3.
@@ -209,7 +211,7 @@ A successful run produces the following output:
 
 This example was designed for deployment with supercomputer systems in mind.
 See https://github.com/bwlewis/1000_genomes_examples for other implementations
-that don't require MPI or shared file systems.
+that don't require MPI.
 
 Singularity encapsulates the program logic and the external library dependency
 chain (MPI, etc.) required by the computation in the following definition file:
@@ -275,13 +277,14 @@ variants from the 1000 Genomes Project chromosomes 21 and 22 as follows:
 ```
 wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/extra/chr21.head.vcf.gz
 wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/extra/chr22.head.vcf.gz
-LANG=C CHUNKSIZE=10000000 mpirun -np 4 singularity run -H $(pwd) variant_pca.img 
+LANG=C CHUNKSIZE=10000000 mpirun -np 2 singularity run -H $(pwd) variant_pca.img 
 ```
 Read the output pca.rdata file from R with, for example:
 ```{r, eval=FALSE}
 x <- readRDS('pca.rdata')
 print(x$d)
-plot(x$v[,1:2])
+library(lattice)
+splom(x$v)
 ```
 
 ### Full-sized example
@@ -300,11 +303,17 @@ while test $j -lt 23; do
 done
 wait
 
-LANG=C CHUNKSIZE=10000000 mpirun -np 4 singularity run -H $(pwd) variant_pca.img 
+LANG=C CHUNKSIZE=10000000 mpirun -np 2 singularity run -H $(pwd) variant_pca.img 
 ```
 
-Replace `-np 4` with the number of processors available on your system. Or, submit
-the job using an available cluster job manager like slurm.
+When running on more than one computer, first distribute the vcf.gz files to
+working directories on each computer. Each computer will only process the files
+located in its working directory.
+
+Replace `-np 2` with the number of computers available in your cluster plus
+one. That isOr, submit the job using an available cluster job manager like slurm.
+See https://cran.r-project.org/web/packages/doMPI/vignettes/doMPI.pdf
+for more details on using MPI with R.
 
 
 ### Notes
@@ -314,7 +323,6 @@ https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/pca-mpi.R
 that we don't reproduce here. See that file and
 https://github.com/bwlewis/1000_genomes_examples/blob/master/PCA_whole_genome.Rmd
 for additional notes.
-
 
 The computation proceeds in two sequential phases, first processing the raw VCF
 files into chunks of sparse R matrices corresponding to the variant data, and
@@ -326,16 +334,15 @@ variable CHUNKSIZE indicating the maximum number of nonzero matrix elements per
 chunk. If unspecified, CHUNKSIZE is automatically determined based on a
 heuristic using the computer memory size.
 
-This version of the program assumes a global shared file system between
-computers, for instance Lustre or GPFS2. The first processing phase of the
-computation stores the R sparse matrix chunks to the global file system for
-re-use iteratively by the algorithm. Alternative versions of the program pin
-sparse matrix chunks in memory on each computer and avoid intermediate file
-system use. That can be obviously more efficient than using a file system.
-But, importantly, the file system approach scales independently of the number
-of computers used in the computation. In particular, this program will run
-(slowly) on a single laptop even if the total variant sparse matrix size vastly
-exceeds available RAM size. Thus, this example trades best performance for
+The first processing phase of the computation stores the R sparse matrix chunks
+corresponding to the input available VCF files for re-use iteratively by the
+algorithm. In particular, this algorithm process the chunked VCF data out of
+core--alternative versions of the program pin sparse matrix chunks in memory on
+each computer and avoid intermediate file system use. That can be obviously
+more efficient than using a file system.  But, importantly, the file system
+approach scales easily.  In particular, this program will run (slowly) on a
+single laptop even if the total variant sparse matrix size vastly exceeds
+available RAM size.  Thus, this example trades best performance for
 flexibility. Despite this trade off, performance can be excellent in the
-example thanks to the efficient algorithm used, and the fact that files
-are cached in each computer's buffer cache if memory permits.
+example thanks to the efficient algorithm used, and the fact that files are
+cached in each computer's buffer cache if memory permits.
