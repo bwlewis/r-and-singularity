@@ -18,7 +18,7 @@ block to their adoption (in any language or system). HPC technologies are often
 difficult to set up, use, and manage.  They often rely on frequently changing
 and complex software library dependencies, and sometimes highly specific
 library versions.  Managing all this boils down to spending more time on system
-administration and commensurately less time on research.
+administration and less time on research.
 
 How do we make things easier? One approach to help accelerate the adoption of
 HPC technology by the R community uses Singularity, a modern application
