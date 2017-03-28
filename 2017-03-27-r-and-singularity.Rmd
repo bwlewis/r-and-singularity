@@ -1,0 +1,416 @@
+---
+title: R and Singularity
+author: Bryan Lewis
+date: '2017-03-29'
+slug: r-and-singularity
+categories:
+  - Applications
+  - R
+  - R Language
+  - Data Science
+tags:
+  - R
+  - Singularity
+  - Containers
+  - TensorFlow
+  - Linux
+draft: yes
+---
+
+R (https://www.r-project.org) is a premier system for statistical and
+scientific computing and data science. At its core, R is a very carefully
+curated, high-level interface to low-level numerical libraries. True to this
+principle, R packages have greatly expanded the scope and number of these
+interfaces over the years, among them interfaces to a large number of
+distributed and parallel computing tools. Despite its impressive breadth of
+sophisticated high-performance computing (HPC) tools, R is not often that
+widely used for "big" problems.
+
+I believe the idiosyncrasies of most HPC technologies represent the major road
+block to their adoption (in any language or system). HPC technologies are often
+difficult to set up, use, and manage.  They often rely on frequently changing
+and complex software library dependencies, and sometimes highly specific
+library versions.  Managing all this boils down to spending more time on system
+administration, and commensurately less time on research.
+
+How do we make things easier? One approach to help accelerate the adoption of
+HPC technology by the R community uses Singularity, a modern application
+containerization technique suited to HPC (http://singularity.lbl.gov/).
+
+
+## Containers
+
+A *container* is a collection of the software requirements to run an
+application.  Importantly, containers are defined and generated from a simple
+text recipe that can be easily communicated and versioned.  Containers leverage
+modern operating system capabilities for virtualizing process and name spaces
+in a high-performance, low-overhead way.  Container technology allows us to
+quickly turn recipes into runnable applications, and then deploy them anywhere.
+
+The success of Docker, CoreOS, and related systems in enterprise business
+applications shows that there is a huge demand for lightweight, versionable,
+and portable containers. Notably, these technologies have not been all that
+widely successful in HPC settings, despite significant effort. Shifter
+(https://github.com/NERSC/shifter) is the most successful application of Docker
+to HPC, and while it is very impressive, it suffers from a few important drawbacks.  The
+root-capable daemon program used by Docker is difficult to accommodate in many
+HPC environments. And the relatively heavy-weight nature of Docker
+virtualization can degrade the performance of high-performance hardware
+resources like Infiniband networking.
+
+Singularity is a lightweight and very simple container technology that is
+particularly well-suited to HPC environments. Singularity virtualizes the
+minimum amount necessary to compute, allowing applications full access to fast
+hardware resources like Infiniband networks and GPUs.  And Singularity runs
+without a server at all, eliminating possible server security exploits. The
+minimalist philosophy of Singularity makes it easy to install and run on
+everything from laptops to supercomputers, promoting the ability to quickly
+test containers before using them across large systems. Singularity is now
+widely available in supercomputer centers across the world.
+
+
+## Reproducible research
+
+Publishing results with code and data that can be reproduced and validated by
+others is an obviously important concept that has seen increased urgency these
+days. The idea is an old one that has been supported by S, S+ and R from the
+beginning with ideas like Sweave and more recently knitr and R markdown.  R
+even promotes reproducible simulation in distributed/parallel settings by
+including high-quality, reproducible, distributed random number generators out of
+the box.
+
+However, as R integrates with an increasing number of external libraries and
+frameworks like cuDNN, Spark, and others, the ability to reproduce the
+*software environment* that R runs in is becoming both more important and more
+complex. Containers help us define these complex set ups with simple,
+versionable text files, and then portably run them in diverse environments.
+
+
+# Examples
+
+The following examples assume that Singularity is installed on your system. See
+http://singularity.lbl.gov/ for details -- it's very easy to install. The
+examples can be run from nearly any modern Unix operating system, although the
+processor architecture must be supported by the container operating system.
+
+## Hello TensorFlow
+
+The first example below shows a canonical "hello world" program. Instead of a
+completely trivial example, we print "Hello, TensorFlow!" using TensorFlow from
+R via Python (https://github.com/tensorflow/tensorflow,
+https://github.com/python/cpython), introducing a complex but typical software
+dependency chain.  A test program validates operation by printing the "hello
+world" message from R through Tensorflow. The container generically will run any
+R program named `main.R` in its working directory.
+
+Here is the Singularity container definition file for the example using the Ubuntu
+Xenial operating system. (Note that you can build a container from this definition
+file on any Singularity-supported operating system.)
+
+```
+BootStrap: debootstrap
+OSVersion: xenial
+MirrorURL: http://archive.ubuntu.com/ubuntu/
+
+%post
+  sed -i 's/main/main restricted universe/g' /etc/apt/sources.list
+  apt-get update
+
+  # Install R, Python, misc. utilities
+  apt-get install -y libopenblas-dev r-base-core libcurl4-openssl-dev libopenmpi-dev openmpi-bin openmpi-common openmpi-doc openssh-client openssh-server libssh-dev wget vim git nano git cmake  gfortran g++ curl wget python autoconf bzip2 libtool libtool-bin python-pip python-dev
+  apt-get clean
+  locale-gen en_US.UTF-8
+
+  # Install Tensorflow
+  pip install tensorflow
+
+  # Install required R packages
+  R --slave -e 'install.packages("devtools", repos="https://cloud.r-project.org/")'
+  R --slave -e 'devtools::install_github("rstudio/tensorflow")'
+
+%test
+  #!/bin/sh
+  exec R --slave -e "library(tensorflow); \
+                     sess  <- tensorflow::tf\$Session(); \
+                     hello <- tensorflow::tf\$constant('Hello, TensorFlow!'); \
+                     sess\$run(hello)"
+
+
+%runscript
+  #!/bin/bash
+  Rscript --slave "main.R"
+```
+
+**TIP** If you're running on Red Hat or CentOS, you'll need the debootstrap
+program: `sudo yum install debootstrap`.  See the Singularity documentation
+for more information.
+
+Assuming that the above definition file is named `tensorflow.def`, you
+can bootstrap a Singularity container image named `tensorflow.img` with:
+```
+sudo rm -f tensorflow.img && \
+sudo singularity create --size 4000 tensorflow.img && \
+sudo singularity bootstrap tensorflow.img tensorflow.def
+```
+
+The `%post` section of the definition file installs R, Python, Tensorflow and
+miscellaneous utilities into the container. The `%test` section runs the "hello
+world" program as an example to verify things are working. The `%run` section
+of this example simply runs an arbitrary user R program named `main.R` in the
+container's working directory.
+
+Run the "hello world" `%test` script with:
+```
+singularity test tensorflow.img
+```
+I love Singularity's ability to include unit tests in container definition
+files -- it reminds me of building R packages! I encourage using the test section
+judiciously to confirm that the container will work as intended.
+
+You can run an arbitrary R program in the container by creating a `main.R` file
+in the container working directory and running:
+```
+singularity run tensorflow.img
+```
+
+
+##  Full-genome variant Principal Components
+
+The previous example illustrated a complex tool chain, but only running on a
+single computer.  This example is closer to a complete distributed R
+application.
+
+Genomic variants record differences in a genome relative to a reference.  Many
+types of differences exist, see for instance
+https://en.wikipedia.org/wiki/Structural_variation. This example focuses on
+differences among the 2,504 whole human genomes curated by the 1000 Genomes
+Project  (see: "A global reference for human genetic variation", The 1000
+Genomes Project Consortium, *Nature* 526, 68-74 (01 October 2015)
+doi:10.1038/nature15393). The example downloads whole genome data files in VCF
+4.1 format. Although the 1000 Genome Project data files are used here, the
+example will work for any input set of VCF files (it processes all files named
+`*.vcf.gz` in the working directory).
+
+The example constructs a sparse 2,504 row (people) by 81,271,844 columns
+(genomic variants) R matrix from the VCF data files. The matrix entries are one
+if a particular variant occurs in the person, or a zero otherwise.  Because not
+every person exhibits every variant, the matrix is very sparse with about 9.8
+billion nonzero-elements, or about 2% fill-in. Rather than construct a single
+giant sparse matrix, the example partitions the data and saves many smaller
+sub-matrices each with CHUNKSIZE columns as R data files in the working
+directory, where CHUNKSIZE is an optional user-defined parameter that defaults
+to a value based on system memory size.
+
+The example computes the first NCOMP principal components, where NCOMP is a
+user-specified environment variable specified by the user, of sparse genomic
+variant VCF files. The example is very general, requiring an arbitrary number
+of VCF data files as input and running on any number of computers. It uses MPI
+to coordinate parallel activity across computers, along with the `Rmpi`,
+`doMPI`, and `foreach` packages in R. The choice of MPI is well-suited to
+supercomputer deployment, and the example assumes that MPI is available along
+with the following assumptions:
+
+- Launched by MPI
+- One or more gzip-compressed variant files ending in ".vcf.gz" (the program will
+  use all files matching this pattern)
+- The input variant files are split up among working directories
+  across the worker computers -- each worker will parse and process only the variant
+  files in its local working directory
+- Optional CHUNKSIZE environment variable in number of variants per chunk
+- Optional NCOMP environment variable specifying the number of principal components
+  to return, defaulting to 3
+
+A successful run produces the following output:
+
+- A file 'pca.rdata' in serialized R format containing the largest NCOMP
+  singular values and corresponding principal component vectors of the variant
+  data
+
+This example was designed for deployment with supercomputer systems in mind.
+See https://github.com/bwlewis/1000_genomes_examples for other implementations
+that don't require MPI.
+
+Singularity encapsulates the program logic and the external library dependency
+chain (MPI, etc.) required by the computation in the following definition file:
+```
+BootStrap: debootstrap
+OSVersion: xenial
+MirrorURL: http://archive.ubuntu.com/ubuntu/
+Include: bash
+
+%post
+  sed -i 's/main/main restricted universe/g' /etc/apt/sources.list
+  apt-get update
+
+  # Install R, openmpi, misc. utilities:
+  apt-get install -y libopenblas-dev r-base-core libcurl4-openssl-dev libopenmpi-dev openmpi-bin openmpi-common openmpi-doc openssh-client openssh-server libssh-dev wget vim git nano git cmake  gfortran g++ curl wget python autoconf bzip2 libtool libtool-bin
+  apt-get clean
+
+  # Install required R packages
+  R --slave -e 'install.packages(c("irlba", "doMPI"), repos="https://cloud.r-project.org/")'
+
+  # Install simple VCF parser helper
+  wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/parse.c && cc -O2 parse.c && mv a.out /usr/local/bin/parsevcf && rm parse.c
+
+  # Set up unit test
+  mkdir -p /usr/local/share/R
+  chmod a+rwx /usr/local/share/R
+  wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/unit.R && mv unit.R /usr/local/share/R/
+
+  # This is the main R program run by /singularity
+  wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/pca-mpi.R && mv pca-mpi.R /usr/local/share/R/
+
+
+%test
+  #!/bin/sh
+  exec Rscript --slave "/usr/local/share/R/unit.R"
+
+%runscript
+  #!/bin/bash
+  Rscript --slave "/usr/local/share/R/pca-mpi.R"
+```
+
+
+Build and bootstrap a Singularity container using the `variant_pca.def` definition file
+with:
+```
+sudo rm -f variant_pca.img && \
+sudo singularity create --size 4000 variant_pca.img && \
+sudo singularity bootstrap variant_pca.img variant_pca.def
+```
+
+### Unit test
+
+The container includes a simple unit test that verifies MPI operation invoked by:
+```
+mpirun -np 4 singularity test variant_pca.img
+```
+
+### Small example
+
+A small, fast-running example computes principal components for the first 10,000
+variants from the 1000 Genomes Project chromosomes 21 and 22 as follows:
+
+```
+wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/extra/chr21.head.vcf.gz
+wget https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/extra/chr22.head.vcf.gz
+LANG=C CHUNKSIZE=10000000 mpirun -x LANG -x CHUNKSIZE -np 2 singularity run -H $(pwd) variant_pca.img 
+```
+Read the output pca.rdata file from R using `readRDS()`. The following code
+plots the first three estimated principal components.
+```{r, eval=FALSE}
+x <- readRDS('pca.rdata')
+library(lattice)
+splom(x$v)
+```
+```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+x <- readRDS(gzcon(url("http://illposed.net/chr21-22-pca.rdata", open="rb")))
+library(lattice)
+splom(x$v)
+```
+We see some obvious clusters in the data, but the clusters are not all that
+well-defined because we only use data from two smaller chromosomes (21 and 22)
+in this example. The clusters correspond to distinct genetic superpopulations.
+See the following example for a refined plot using the whole genomes.
+
+
+### Full-sized example
+
+Finally, compute the whole genome principal components across all chromosomes and all
+2,504 people in the 1000 Genomes project with:
+```
+# Remove small example files if they exist
+rm -f chr21.head.vcf.gz chr22.head.vcf.gz
+
+# Download the variant files
+j=1
+while test $j -lt 23; do
+  wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr${j}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz &
+  j=$(( $j + 1 ))
+done
+wait
+```
+
+When running on more than one computer, first distribute the vcf.gz files by
+scattering them across working directories on each computer. Each computer will
+only process the files located in its working directory, so copy a subset of
+the files to each computer.
+
+The Singularity container image must also be available to run on each computer,
+so copy the image to each one.
+
+Now scatter the `*.vcf.gz` files across your MPI computers, for instance using `scp`.
+Let's assume for this example that we have four total computers. Then we need to invoke
+the program on 4 + 1 = 5 total MPI hosts, as outlined in
+https://cran.r-project.org/web/packages/doMPI/vignettes/doMPI.pdf (the first
+listed host will operate as the R master program in a master/slave configuration).
+
+Assume that our four host computers are listed in a comma-separated list
+by the environment variable HOSTS, for instance by
+```
+HOSTS=10.0.0.1,10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4
+```
+Then a typical openmpi invocation is (for our four hosts):
+```
+LANG=C CHUNKSIZE=10000000 mpirun -wd $(pwd) -x LANG -x CHUNKSIZE -np 5 -host $(HOSTS) singularity run -H $(pwd) variant_pca.img
+```
+
+Replace the host list and `-np 5` with the number of computers available in your cluster plus
+one. Or, submit the job using an available cluster job manager like Slurm.
+See https://cran.r-project.org/web/packages/doMPI/vignettes/doMPI.pdf
+for more details on using MPI with R.
+
+### Example output
+
+To give you an idea of performance, I ran this example on four Amazon EC2
+r4-4xlarge instances. The parsing step completed in about 20 minutes, and
+principal component computation took about 11 minutes (680 seconds).
+
+As with the small example above, we can read the output file and
+plot the principal components:
+```{r, eval=FALSE}
+x <- readRDS('pca.rdata')
+library(lattice)
+splom(x$v)
+```
+```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+x <- readRDS(gzcon(url("http://illposed.net/1239-680-r4-4xlargex4-chr1-22-pca.rdata", open="rb")))
+library(lattice)
+splom(x$v)
+```
+The resulting clusters are much more highly defined, and split into four or
+five very well-defined data clusters, corresponding almost exactly to the NIH
+superpopulation categories for each person. Some of the data clusters
+themselves exhibit sub-cluster structure.
+
+
+### Additional Notes
+
+The computation uses an R program downloaded from
+https://raw.githubusercontent.com/bwlewis/1000_genomes_examples/master/pca-mpi.R
+that we don't reproduce here. See that file and
+https://github.com/bwlewis/1000_genomes_examples/blob/master/PCA_whole_genome.Rmd
+for additional notes.
+
+The computation proceeds in two sequential phases, first processing the raw VCF
+files into chunks of sparse R matrices corresponding to the variant data, and
+then computing principal components on the R matrices. Parallel computation is
+used within each phase.
+
+Sparse matrix chunk size is specified by the user with the environment
+variable CHUNKSIZE to indicate the maximum number of nonzero matrix elements per
+chunk. If unspecified, CHUNKSIZE is automatically determined based on a
+heuristic using the host computer's memory size.
+
+The first processing phase of the computation stores the R sparse matrix chunks
+corresponding to the input available VCF files for re-use iteratively by the
+algorithm. In particular, this algorithm process the chunked VCF data out of
+core -- alternative versions of the program pin sparse matrix chunks in memory on
+each computer and avoid intermediate file system use. That can be obviously
+more efficient than using a file system.  But, importantly, the file system
+approach scales easily.  In particular, this program will run (slowly) on a
+single laptop even if the total variant sparse matrix size vastly exceeds
+available RAM size.  Thus, this example trades best performance for
+flexibility. Despite this trade off, performance can be excellent in the
+example, thanks to the efficient algorithm used and the fact that files are
+cached in each computer's buffer cache if memory permits.
