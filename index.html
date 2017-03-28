@@ -188,7 +188,7 @@ sudo singularity bootstrap tensorflow.img tensorflow.def</code></pre>
 <h2>Full-genome variant Principal Components</h2>
 <p>The previous example illustrated a complex tool chain but only running on a single computer. This example is closer to a complete distributed R application.</p>
 <p>Genomic variants record differences in a genome relative to a reference. Many types of differences exist, see for instance <a href="https://en.wikipedia.org/wiki/Structural_variation" class="uri">https://en.wikipedia.org/wiki/Structural_variation</a>. This example focuses on differences among the 2,504 whole human genomes curated by the 1000 Genomes Project (see: A global reference for human genetic variation, The 1000 Genomes Project Consortium, Nature 526, 68-74 (01 October 2015) <a href="doi:10.1038/nature15393" class="uri">doi:10.1038/nature15393</a>). The example downloads whole genome data files in VCF 4.1 format. Although the 1000 Genome Project data files are used here, the example will work for any input set of VCF files (it processes all files named <code>*.vcf.gz</code> in the working directory).</p>
-<p>The example constructs a sparse 2,504 row (people) by 81,271,844 columns (genomic variants) R matrix from the VCF data files. The matrix entries are one if a particular variant occurs in the person or a zero otherwise. Because not every person exhibits every variant, the matrix is very sparse with about 9.8 billion nonzero-elements, or about 2% fill-in. Rather than construct a single giant sparse matrix, the example partitions the data and saves many smaller sub-matrices each with CHUNKSIZE columns as R data files in the working directory, where CHUNKSIZE is an optional user-defined parameter that defaults to a value based on system memory size.</p>
+<p>The example constructs a sparse 2,504 row (people) by 81,271,844 column (genomic variants) R matrix from the VCF data files. The matrix entries are one if a particular variant occurs in the person or a zero otherwise. Because not every person exhibits every variant, the matrix is very sparse with about 9.8 billion nonzero-elements, or about 2% fill-in. Rather than construct a single giant sparse matrix, the example partitions the data and saves many smaller sub-matrices each with CHUNKSIZE non-zero elements as R data files in the working directory, where CHUNKSIZE is an optional user-defined parameter that defaults to a value based on system memory size.</p>
 <p>The example computes the first NCOMP principal components, where NCOMP is a user-specified environment variable specified by the user, of sparse genomic variant VCF files. The example is very general, requiring an arbitrary number of VCF data files as input and running on any number of computers. It uses MPI to coordinate parallel activity across computers, along with the the Rmpi, doMPI, and foreach packages in R. The choice of MPI is well-suited to supercomputer deployment, and the example assumes that MPI is available along with the following assumptions:</p>
 <ul>
 <li>Launched by MPI.</li>
@@ -269,7 +269,7 @@ rm -f chr21.head.vcf.gz chr22.head.vcf.gz
 # Download the variant files
 j=1
 while test $j -lt 23; do
-  wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr${j}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz &amp;
+  wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr${j}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
   j=$(( $j + 1 ))
 done
 wait</code></pre>
