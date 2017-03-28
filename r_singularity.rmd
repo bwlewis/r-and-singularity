@@ -178,13 +178,13 @@ doi:10.1038/nature15393). The example downloads whole genome data files in VCF
 example will work for any input set of VCF files (it processes all files named
 `*.vcf.gz` in the working directory).
 
-The example constructs a sparse 2,504 row (people) by 81,271,844 columns
+The example constructs a sparse 2,504 row (people) by 81,271,844 column
 (genomic variants) R matrix from the VCF data files. The matrix entries are one
 if a particular variant occurs in the person or a zero otherwise.  Because not
 every person exhibits every variant, the matrix is very sparse with about 9.8
 billion nonzero-elements, or about 2% fill-in. Rather than construct a single
 giant sparse matrix, the example partitions the data and saves many smaller
-sub-matrices each with CHUNKSIZE columns as R data files in the working
+sub-matrices each with CHUNKSIZE non-zero elements as R data files in the working
 directory, where CHUNKSIZE is an optional user-defined parameter that defaults
 to a value based on system memory size.
 
@@ -313,7 +313,7 @@ rm -f chr21.head.vcf.gz chr22.head.vcf.gz
 # Download the variant files
 j=1
 while test $j -lt 23; do
-  wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr${j}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz &
+  wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr${j}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
   j=$(( $j + 1 ))
 done
 wait
