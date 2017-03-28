@@ -19,7 +19,7 @@ draft: yes
 
 R (https://www.r-project.org) is a premier system for statistical and
 scientific computing and data science. At its core, R is a very carefully
-curated, high-level interface to low-level numerical libraries. True to this
+curated high-level interface to low-level numerical libraries. True to this
 principle, R packages have greatly expanded the scope and number of these
 interfaces over the years, among them interfaces to a large number of
 distributed and parallel computing tools. Despite its impressive breadth of
