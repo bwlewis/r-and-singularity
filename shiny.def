@@ -1,74 +1,14 @@
-BootStrap: debootstrap
-OSVersion: stretch
-MirrorURL: http://ftp.us.debian.org/debian/
+BootStrap: localimage
+From: ./r.img
 
-## R/shiny server singularity definition file.
+## Shiny server singularity definition file, requires a base R image r.img built from the r.def file.
 ## Assembled from sources at:
 ## https://github.com/rocker-org/rocker/blob/master/r-base/Dockerfile
 ## and
 ## https://github.com/rocker-org/shiny/blob/master/Dockerfile.
 ## See https://singularity.lbl.gov/docs-recipes for help on this file.
-##
-## Build a container image from this definition with, for instance:
-## sudo singularity build shiny.img shiny.def
-##
-## Usage:
-## 1. Add a 'shiny' user to your system...the shiny server is configured to run as the user 'shiny'.
-## 2. Start the shiny server, binding some temporary directories into the singularity image:
-##
-## sudo -u shiny mkdir -p /tmp/shiny-server
-## sudo -u shiny singularity instance.start -B /tmp/shiny-server:/var/log/shiny-server \
-##                                       -B /tmp/shiny-server:/var/lib/shiny-server shiny.img shiny
-##
-## where 'shiny.img' is the output of the build of this def file.
-## At this point you should be able to point a browser to http://localhost:3838 and see the service.
-##
-## Optionally, shell into the running conatiner with:
-## singularity exec instance://shiny  /bin/bash
-##
-## Stop the running container instance with:
-## singularity instance.stop shiny
-##
-## See https://singularity.lbl.gov/docs-instances for details.
 
 %post
-  apt-get update # bwl: really? this kind of makes things not reporducible, right?
-  apt-get -y install  --no-install-recommends ed less locales vim-tiny wget ca-certificates fonts-texgyre
-  apt-get clean
-
-  ## Configure default locale, see https://github.com/rocker-org/rocker/issues/19
-  echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
-        && locale-gen en_US.utf8 \
-        && /usr/sbin/update-locale LANG=en_US.UTF-8
-
-  export LC_ALL=en_US.UTF-8
-  export LANG=en_US.UTF-8
-
-  ## Use Debian unstable via pinning -- new style via APT::Default-Release
-  ## bwl: I get this error "The value 'testing' is invalid for APT::Default-Release as such a release is not available in the sources"
-  echo "deb http://http.debian.net/debian sid main" > /etc/apt/sources.list.d/debian-unstable.list
-  ##      && echo 'APT::Default-Release "testing";' > /etc/apt/apt.conf.d/default
-
-  export R_BASE_VERSION=3.4.4
-
-  ## Now install R and littler, and create a link for littler in /usr/local/bin
-  ## Also set a default CRAN repo, and make sure littler knows about it too
-  apt-get update \
-    && apt-get install -t unstable -y --no-install-recommends \
-        littler \
-        r-cran-littler \
-        r-base=${R_BASE_VERSION}-* \
-        r-base-dev=${R_BASE_VERSION}-* \
-        r-recommended=${R_BASE_VERSION}-* \
-    && echo 'options(repos = c(CRAN = "https://cloud.r-project.org/"), download.file.method = "libcurl")' >> /etc/R/Rprofile.site \
-    && echo 'source("/etc/R/Rprofile.site")' >> /etc/littler.r \
-    && ln -s /usr/share/doc/littler/examples/install.r /usr/local/bin/install.r \
-    && ln -s /usr/share/doc/littler/examples/install2.r /usr/local/bin/install2.r \
-    && ln -s /usr/share/doc/littler/examples/installGithub.r /usr/local/bin/installGithub.r \
-    && ln -s /usr/share/doc/littler/examples/testInstalled.r /usr/local/bin/testInstalled.r \
-    && install.r docopt \
-    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds \
-    && rm -rf /var/lib/apt/lists/*
 
   ## Shiny server components
   apt-get update && apt-get install -y -t unstable \
@@ -102,15 +42,7 @@ MirrorURL: http://ftp.us.debian.org/debian/
 %runscript
   cat << EOF
 Usage:
-1. Add a 'shiny' user to your system...the shiny server is configured to run as the user 'shiny'.
-2. Start the shiny server, binding some temporary directories into the singularity image:
-
-sudo -u shiny mkdir -p /tmp/shiny-server
-sudo -u shiny singularity instance.start -B /tmp/shiny-server:/var/log/shiny-server \
-                                      -B /tmp/shiny-server:/var/lib/shiny-server shiny.img shiny
-
-where 'shiny.img' is the output of the build of this def file.
-At this point you should be able to point a browser to http://localhost:3838 and see the service.
+singularity instance.start [-B /optional/mountpoint/outside:/mountpoint/inside] shiny.img shiny
 
 Optionally, shell into the running conatiner with:
 singularity exec instance://shiny  /bin/bash
