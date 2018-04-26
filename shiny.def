@@ -46,13 +46,18 @@ Usage:
 1. Add a 'shiny' user to your system...the shiny server is configured to run as the user 'shiny'.
 2. Start the shiny server, binding some temporary directories into the singularity image:
 
-sudo shiny mkdir -p /tmp/shiny-server
-sudo shiny singularity instance.start -B /tmp/shiny-server:/var/log/shiny-server \
+sudo -u shiny mkdir -p /tmp/shiny-server
+sudo -u shiny singularity instance.start -B /tmp/shiny-server:/var/log/shiny-server \
                                       -B /tmp/shiny-server:/var/lib/shiny-server shiny.img shiny
 
 where 'shiny.img' is the output of the build of this def file.
 At this point you should be able to point a browser to http://localhost:3838 and see the service.
 
 Optionally, shell into the running conatiner with:
-singularity exec instance://shiny  /bin/bashSee https://singularity.lbl.gov/docs-instances for details.
+sudo -u shiny singularity exec instance://shiny  /bin/bash
+
+Stop the instance with:
+sudo -u shiny singularity instance.stop shiny
+
+See https://singularity.lbl.gov/docs-instances for details.
 EOF
